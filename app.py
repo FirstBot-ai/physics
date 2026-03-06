@@ -62,7 +62,7 @@ def ask_gigachat(token, messages):
 
 # === ИНТЕРФЕЙС ===
 st.set_page_config(page_title="Физика Бот", page_icon="⚛️")
-st.title("⚛️ Физика Бот")
+st.title("⚛️ ФИЗИКА НА 100%")
 
 # === БОКОВАЯ ПАНЕЛЬ С КЛЮЧАМИ ===
 with st.sidebar:
