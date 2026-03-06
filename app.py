@@ -3,8 +3,9 @@ import streamlit as st
 import requests
 import base64
 import random
+import os
 
-# === НАСТРОЙКИ ===
+# === НАСТРОЙКИ API ===
 GIGACHAT_TOKEN_URL = "https://gigachat.devices.sberbank.ru/api/v1/oauth"
 GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
 
@@ -37,40 +38,94 @@ QUIZ_QUESTIONS = [
 
 # === ФУНКЦИИ ===
 def get_gigachat_token(client_id, client_secret):
+    """Получение токена авторизации от GigaChat"""
     credentials = f"{client_id}:{client_secret}"
     encoded = base64.b64encode(credentials.encode()).decode()
-    headers = {"Content-Type": "application/x-www-form-urlencoded", "Authorization": f"Basic {encoded}"}
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded", 
+        "Authorization": f"Basic {encoded}",
+        "RqUID": "00000000-0000-0000-0000-000000000000"
+    }
     data = {"scope": "GIGACHAT_API_PERS"}
+    
     try:
         response = requests.post(GIGACHAT_TOKEN_URL, headers=headers, data=data, timeout=10)
+        
+        # Подробная отладка
         if response.status_code == 200:
             return response.json()["access_token"]
+        elif response.status_code == 401:
+            st.error("❌ Ошибка 401: Неверный Client ID или Client Secret")
+            st.info("💡 Проверьте, что ключи скопированы без пробелов и актуальны")
+        elif response.status_code == 403:
+            st.error("❌ Ошибка 403: У ключей нет прав доступа к API")
+            st.info("💡 Проверьте в кабинете GigaDev, что API активирован")
+        else:
+            st.error(f"❌ Ошибка авторизации: {response.status_code}")
+            st.error(f"📄 Ответ сервера: {response.text}")
+        
         return None
-    except:
+        
+    except requests.exceptions.Timeout:
+        st.error("⏱️ Таймаут: Сервер GigaChat не отвечает")
+        return None
+    except requests.exceptions.ConnectionError:
+        st.error("🌐 Ошибка соединения: Проверьте интернет-соединение")
+        return None
+    except Exception as e:
+        st.error(f"❌ Неожиданная ошибка: {e}")
         return None
 
 def ask_gigachat(token, messages):
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-    payload = {"model": "GigaChat", "messages": messages, "temperature": 0.3}
+    """Отправка запроса к GigaChat"""
+    headers = {
+        "Content-Type": "application/json", 
+        "Authorization": f"Bearer {token}"
+    }
+    payload = {
+        "model": "GigaChat", 
+        "messages": messages, 
+        "temperature": 0.3
+    }
+    
     try:
         response = requests.post(GIGACHAT_CHAT_URL, headers=headers, json=payload, timeout=30)
+        
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
-        return f"Ошибка API: {response.status_code}"
+        elif response.status_code == 401:
+            return "❌ Ошибка: Токен недействителен. Проверьте ключи."
+        elif response.status_code == 429:
+            return "⏳ Ошибка: Слишком много запросов. Подождите немного."
+        else:
+            return f"❌ Ошибка API: {response.status_code}\n📄 {response.text}"
+            
+    except requests.exceptions.Timeout:
+        return "⏱️ Таймаут: Сервер не отвечает. Попробуйте позже."
     except Exception as e:
-        return f"Ошибка: {e}"
+        return f"❌ Ошибка: {e}"
 
 # === ИНТЕРФЕЙС ===
 st.set_page_config(page_title="Физика Бот", page_icon="⚛️")
-st.title("⚛️ ФИЗИКА НА 100%")
+st.title("⚛️ Физика Бот")
 
 # === БОКОВАЯ ПАНЕЛЬ С КЛЮЧАМИ ===
 with st.sidebar:
     st.header("🔑 Настройки")
-    client_id = st.text_input("Client ID", type="password", value="")
-    client_secret = st.text_input("Client Secret", type="password", value="")
-    st.info("💡 Вставь свои ключи от GigaChat сюда")
-    st.caption("Ключи не сохраняются и исчезнут после обновления страницы")
+    
+    # Автоматическая загрузка из Railway Variables
+    env_id = os.environ.get("GIGACHAT_CLIENT_ID", "")
+    env_secret = os.environ.get("GIGACHAT_CLIENT_SECRET", "")
+    
+    client_id = st.text_input("Client ID", type="password", value=env_id)
+    client_secret = st.text_input("Client Secret", type="password", value=env_secret)
+    
+    if env_id or env_secret:
+        st.success("✅ Ключи загружены из Railway Variables")
+    else:
+        st.warning("⚠️ Введите ключи вручную или добавьте Variables в Railway")
+    
+    st.caption("💡 Ключи не сохраняются в логах")
 
 # === ОТОБРАЖЕНИЕ ЧАТА ===
 for msg in st.session_state.messages:
@@ -83,18 +138,22 @@ if prompt := st.chat_input("Задайте вопрос по физике..."):
     if not client_id or not client_secret:
         st.error("⚠️ Введите Client ID и Client Secret в настройках слева!")
     else:
+        # Добавляем сообщение пользователя в историю
         st.session_state.messages.append({"role": "user", "content": prompt})
+        
         with st.chat_message("user"):
             st.markdown(prompt)
+        
         with st.chat_message("assistant"):
-            with st.spinner("Думаю..."):
+            with st.spinner("🤔 Думаю..."):
                 token = get_gigachat_token(client_id, client_secret)
+                
                 if token:
                     response = ask_gigachat(token, st.session_state.messages)
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
                 else:
-                    st.error("❌ Не удалось подключиться к GigaChat. Проверьте ключи.")
+                    st.error("❌ Не удалось получить токен. Проверьте ключи и логи выше.")
 
 # === ВИКТОРИНА ===
 st.divider()
@@ -113,7 +172,9 @@ if "current_quiz" in st.session_state and not st.session_state.quiz_answered:
     st.markdown(f"**{q['question']}**")
     for opt in q["options"]:
         st.write(opt)
+    
     answer = st.text_input("Ваш ответ (введите букву А, Б, В или Г):", key="quiz_input").strip().upper()
+    
     if st.button("Проверить ответ"):
         if answer in ["А", "Б", "В", "Г"]:
             if answer == q["correct"]:
@@ -126,4 +187,4 @@ if "current_quiz" in st.session_state and not st.session_state.quiz_answered:
             st.warning("⚠️ Введите одну букву: А, Б, В или Г")
 
 st.divider()
-st.caption("Проект в учебных целях | Физика + GigaChat + Streamlit")
+st.caption("Проект в учебных целях | Физика + GigaChat + Streamlit + Railway")
