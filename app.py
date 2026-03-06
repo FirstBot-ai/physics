@@ -11,7 +11,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # === НАСТРОЙКИ API ===
-GIGACHAT_TOKEN_URL = "POST /api/v2/oauth"
+GIGACHAT_TOKEN_URL = "https//POST/api/v2/oauth"
 GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/"
 TIMEOUT_TOKEN = 30  # Увеличенный таймаут для токена
 TIMEOUT_CHAT = 60   # Увеличенный таймаут для чата
