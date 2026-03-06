@@ -64,22 +64,24 @@ def ask_gigachat(token, messages):
 st.set_page_config(page_title="Физика Бот", page_icon="⚛️")
 st.title("⚛️ Физика Бот")
 
+# === БОКОВАЯ ПАНЕЛЬ С КЛЮЧАМИ ===
 with st.sidebar:
     st.header("🔑 Настройки")
-    client_id = st.text_input("Client ID", type="password", value=st.secrets.get("GIGACHAT_CLIENT_ID", ""))
-    client_secret = st.text_input("Client Secret", type="password", value=st.secrets.get("GIGACHAT_CLIENT_SECRET", ""))
-    st.info("💡 Ключи можно задать в Variables на Railway")
+    client_id = st.text_input("Client ID", type="password", value="")
+    client_secret = st.text_input("Client Secret", type="password", value="")
+    st.info("💡 Вставь свои ключи от GigaChat сюда")
+    st.caption("Ключи не сохраняются и исчезнут после обновления страницы")
 
-# Отображение чата
+# === ОТОБРАЖЕНИЕ ЧАТА ===
 for msg in st.session_state.messages:
     if msg["role"] != "system":
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-# Обработка ввода пользователя
+# === ОБРАБОТКА ВВОДА ПОЛЬЗОВАТЕЛЯ ===
 if prompt := st.chat_input("Задайте вопрос по физике..."):
     if not client_id or not client_secret:
-        st.error("⚠️ Введите Client ID и Client Secret в настройках!")
+        st.error("⚠️ Введите Client ID и Client Secret в настройках слева!")
     else:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
