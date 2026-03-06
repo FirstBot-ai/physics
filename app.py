@@ -6,8 +6,8 @@ import random
 import os
 
 # === НАСТРОЙКИ API ===
-GIGACHAT_TOKEN_URL = "https://gigachat.devices.sberbank.ru/api/v1/oauth"
-GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
+GIGACHAT_TOKEN_URL = "https://gigachat.devices.sberbank.ru/api/v2/oauth"
+GIGACHAT_CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v2/chat/completions"
 
 # === ИНИЦИАЛИЗАЦИЯ СЕССИИ ===
 if "messages" not in st.session_state:
